@@ -15,7 +15,7 @@ app.use(express.json());
 app.use('/api', orderRoutes);
 app.use('/api', itemRoutes); // Use item routes
 
-mongoose.connect('mongodb://localhost:27017/wasteloop', {
+mongoose.connect('mongodb://127.0.0.1:27017/wasteloop', {
   useNewUrlParser: true,
   useUnifiedTopology: true
 }).then(() => {

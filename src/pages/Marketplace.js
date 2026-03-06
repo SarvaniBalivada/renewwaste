@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Grid, Box, Typography, TextField, Select, MenuItem, Container, Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
-import ItemCard from '../components/ItemCard';
+import { Box, Typography, TextField, Select, MenuItem, Container, Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
+import './CardStyles.css';
 
 function Marketplace() {
   const [items, setItems] = useState([]);
@@ -26,7 +26,7 @@ function Marketplace() {
 
   const filteredItems = items.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !category || item.category === category;
+    const matchesCategory = !category || item.wasteCategory === category;
     return matchesSearch && matchesCategory;
   });
 
@@ -63,63 +63,162 @@ function Marketplace() {
     setOpenDialog(true);
   };
 
-  return (
-    <Container maxWidth="lg">
-      <Box sx={{ padding: 3 }}>
-        <Typography 
-          variant="h2" 
-          align="center" 
-          sx={{ 
-            fontSize: '2rem',
-            fontWeight: 'bold',
-            marginBottom: 3,
-            color: '#2c3e50'
-          }}
-        >
-          Marketplace
-        </Typography>
+  const getBadgeClass = (type) => {
+    switch(type) {
+      case 'sell': return 'badge-sell';
+      case 'donate': return 'badge-donate';
+      case 'exchange': return 'badge-exchange';
+      default: return 'badge-sell';
+    }
+  };
 
-        <Box sx={{ 
-          display: 'flex', 
-          gap: 2, 
-          marginBottom: 4,
-          justifyContent: 'center'
-        }}>
-          <TextField
-            placeholder="Search items..."
+  // Dynamic emoji based on waste category - green theme
+  const getEmojiByCategory = (wasteCategory) => {
+    if (!wasteCategory) return '♻️';
+    const cat = wasteCategory.toLowerCase();
+    if (cat.includes('plastic')) return '♻️';
+    if (cat.includes('paper') || cat.includes('cardboard')) return '📄';
+    if (cat.includes('glass')) return '🫙';
+    if (cat.includes('metal')) return '🥫';
+    if (cat.includes('organic') || cat.includes('food')) return '🍂';
+    if (cat.includes('electronic') || cat.includes('e-waste')) return '📱';
+    if (cat.includes('textile') || cat.includes('clothing')) return '👕';
+    if (cat.includes('industrial')) return '🏭';
+    if (cat.includes('recyclable')) return '♻️';
+    return '♻️';
+  };
+
+  // Green gradient backgrounds - environmental theme
+  const getGradientByCategory = (wasteCategory) => {
+    if (!wasteCategory) return 'linear-gradient(135deg, #2e7d32 0%, #4caf50 100%)';
+    const cat = wasteCategory.toLowerCase();
+    if (cat.includes('plastic')) return 'linear-gradient(135deg, #1b5e20 0%, #4caf50 100%)';
+    if (cat.includes('paper') || cat.includes('cardboard')) return 'linear-gradient(135deg, #33691e 0%, #689f38 100%)';
+    if (cat.includes('glass')) return 'linear-gradient(135deg, #2e7d32 0%, #66bb6a 100%)';
+    if (cat.includes('metal')) return 'linear-gradient(135deg, #1b5e20 0%, #43a047 100%)';
+    if (cat.includes('organic') || cat.includes('food')) return 'linear-gradient(135deg, #33691e 0%, #7cb342 100%)';
+    if (cat.includes('electronic') || cat.includes('e-waste')) return 'linear-gradient(135deg, #2e7d32 0%, #81c784 100%)';
+    if (cat.includes('textile') || cat.includes('clothing')) return 'linear-gradient(135deg, #1b5e20 0%, #558b2f 100%)';
+    if (cat.includes('industrial')) return 'linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%)';
+    if (cat.includes('recyclable')) return 'linear-gradient(135deg, #2e7d32 0%, #4caf50 100%)';
+    return 'linear-gradient(135deg, #2e7d32 0%, #4caf50 100%)';
+  };
+
+  return (
+    <div className="page-background">
+      <div className="page-header">
+        <h1>🌿 Marketplace</h1>
+        <p>Browse and purchase recycled materials from the community</p>
+      </div>
+
+      <div className="content-wrapper">
+        {/* Search and Filter */}
+        <div className="filter-section">
+          <input
+            type="text"
+            className="search-input"
+            placeholder="🔍 Search items..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            size="small"
-            sx={{ width: 200 }}
           />
-          <Select
+          <select
+            className="select-input"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            size="small"
-            sx={{ width: 150 }}
-            displayEmpty
           >
-            <MenuItem value="">All Categories</MenuItem>
-            <MenuItem value="plastic">Plastic</MenuItem>
-            <MenuItem value="paper">Paper</MenuItem>
-            <MenuItem value="glass">Glass</MenuItem>
-            <MenuItem value="metal">Metal</MenuItem>
-          </Select>
-        </Box>
+            <option value="">All Categories</option>
+            <option value="plastic">Plastic</option>
+            <option value="paper">Paper</option>
+            <option value="glass">Glass</option>
+            <option value="metal">Metal</option>
+            <option value="organic">Organic</option>
+            <option value="electronic">Electronic</option>
+            <option value="textile">Textile</option>
+            <option value="industrial">Industrial</option>
+            <option value="recyclable">Recyclable</option>
+          </select>
+        </div>
 
-        <Grid container spacing={3}>
+        {/* Results count */}
+        <Typography variant="body1" sx={{ textAlign: 'center', color: '#558b2f', marginBottom: '24px' }}>
+          Showing {filteredItems.length} items
+        </Typography>
+
+        <div className="card-grid-container">
           {filteredItems.map(item => (
-            <Grid item xs={12} sm={6} md={4} key={item._id}>
-              <ItemCard 
-                item={item} 
-                onBuyClick={() => handleOpenBuyDialog(item)}
-              />
-            </Grid>
+            <div className="unified-card" key={item._id}>
+              <div className="card-image-container">
+                {item.imageUrl ? (
+                  <img 
+                    src={item.imageUrl}
+                    alt={item.title}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/default-image.png';
+                    }}
+                  />
+                ) : (
+                  <div style={{ 
+                    width: '100%', 
+                    height: '100%', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    background: getGradientByCategory(item.wasteCategory),
+                    color: 'white',
+                    fontSize: '3rem'
+                  }}>
+                    <span>{getEmojiByCategory(item.wasteCategory)}</span>
+                  </div>
+                )}
+              </div>
+              <div className="card-content">
+                <h3 className="card-title">{item.title}</h3>
+                <p className="card-description">{item.description}</p>
+                
+                {item.wasteCategory && (
+                  <span className="category-badge">
+                    {item.wasteCategory}
+                  </span>
+                )}
+                
+                <div className="card-meta">
+                  <span className={`card-price ${item.price === 0 ? 'free' : ''}`}>
+                    {item.price === 0 ? 'FREE' : `₹${item.price}`}
+                  </span>
+                  <span className={`card-badge ${getBadgeClass(item.listingType)}`}>
+                    {item.listingType}
+                  </span>
+                </div>
+                <button 
+                  className="card-button"
+                  onClick={() => handleOpenBuyDialog(item)}
+                >
+                  {item.listingType === 'sell' ? 'BUY NOW' : item.listingType === 'donate' ? 'CLAIM' : 'EXCHANGE'}
+                </button>
+              </div>
+            </div>
           ))}
-        </Grid>
+        </div>
 
-        <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-          <DialogTitle>Delivery Address</DialogTitle>
+        {filteredItems.length === 0 && (
+          <Box sx={{ textAlign: 'center', py: 8 }}>
+            <Typography variant="h6" sx={{ color: '#558b2f' }}>
+              No items found. Try adjusting your search.
+            </Typography>
+          </Box>
+        )}
+
+        <Dialog 
+          open={openDialog} 
+          onClose={() => setOpenDialog(false)}
+          PaperProps={{
+            sx: { borderRadius: 2, padding: 2, minWidth: 400 }
+          }}
+        >
+          <DialogTitle sx={{ fontWeight: 'bold', fontSize: '1.3rem', color: '#1b5e20' }}>
+            Delivery Address
+          </DialogTitle>
           <DialogContent>
             <TextField
               autoFocus
@@ -131,22 +230,28 @@ function Marketplace() {
               rows={4}
               value={deliveryAddress}
               onChange={(e) => setDeliveryAddress(e.target.value)}
+              sx={{ marginTop: 2 }}
             />
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+          <DialogActions sx={{ padding: '16px 24px' }}>
+            <Button onClick={() => setOpenDialog(false)} sx={{ color: '#558b2f' }}>
+              Cancel
+            </Button>
             <Button 
               onClick={() => handleBuyNow(selectedItem)}
               variant="contained" 
-              color="primary"
+              sx={{ 
+                backgroundColor: '#2e7d32',
+                '&:hover': { backgroundColor: '#1b5e20' }
+              }}
               disabled={!deliveryAddress.trim()}
             >
               Confirm Order
             </Button>
           </DialogActions>
         </Dialog>
-      </Box>
-    </Container>
+      </div>
+    </div>
   );
 }
 

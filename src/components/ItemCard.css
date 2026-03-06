@@ -11,7 +11,10 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   transition: transform 0.2s;
-  margin: 10px; /* Consistent margin for each card */
+  margin: 10px;
+  height: 380px;
+  display: flex;
+  flex-direction: column;
 }
 
 .item-card:hover {
@@ -31,10 +34,34 @@
 }
 
 .item-details {
-  padding: 16px; /* Consistent padding for item details */
+  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.item-details h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-details p {
+  margin: 0 0 8px 0;
+  font-size: 0.9rem;
+  color: #666;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .price {
   font-weight: bold;
   color: #1976d2;
+  margin-top: auto;
+  margin-bottom: 12px;
 }
