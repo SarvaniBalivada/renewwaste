@@ -50,17 +50,17 @@ app.get('/', (req, res) => {
   res.json({ message: 'Welcome to WasteLoop API' });
 });
 
-// MongoDB connection - with fallback if local MongoDB is not available
+// MongoDB connection - uses MONGODB_URI env var (for Vercel) or local MongoDB
 const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/wasteloop';
 
 mongoose.connect(mongoUri, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
-  .then(() => console.log('Connected to MongoDB'))
+  .then(() => console.log('Connected to MongoDB:', mongoUri.includes('localhost') ? 'Local' : 'Cloud'))
   .catch(err => {
     console.error('MongoDB connection error:', err.message);
-    console.log('Note: If MongoDB is not running, the API will work but data won\'t persist');
+    console.log('Note: API will work but data won\'t persist without MongoDB');
   });
 
 // User Schema
