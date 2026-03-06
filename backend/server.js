@@ -25,11 +25,24 @@ app.use((req, res, next) => {
 });
 
 // Serve static files from the React app's public directory
-app.use(express.static(path.join(__dirname, '../public')));
+app.use(express.static(path.join(__dirname, '../public'), {
+  index: false,
+  dotfiles: 'ignore'
+}));
 
-// Handle manifest.json specifically
+// Handle manifest.json specifically - must come BEFORE the static middleware catches it
 app.get('/manifest.json', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/manifest.json'));
+});
+
+// Also handle the %PUBLIC_URL% prefix that React sometimes adds
+app.get('/%PUBLIC_URL%/manifest.json', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/manifest.json'));
+});
+
+// Handle favicon.ico
+app.get('/favicon.ico', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/favicon.ico'));
 });
 
 // Basic route for testing
@@ -37,13 +50,18 @@ app.get('/', (req, res) => {
   res.json({ message: 'Welcome to WasteLoop API' });
 });
 
-// MongoDB connection
-mongoose.connect('mongodb://127.0.0.1:27017/wasteloop', {
+// MongoDB connection - with fallback if local MongoDB is not available
+const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/wasteloop';
+
+mongoose.connect(mongoUri, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
   .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
+  .catch(err => {
+    console.error('MongoDB connection error:', err.message);
+    console.log('Note: If MongoDB is not running, the API will work but data won\'t persist');
+  });
 
 // User Schema
 const userSchema = new mongoose.Schema({
