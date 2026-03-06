@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import API_BASE_URL from '../config';
 
 function Feedback() {
   const [name, setName] = useState('');
@@ -9,7 +10,7 @@ function Feedback() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/api/feedback', {
+      const response = await fetch(`${API_BASE_URL}/api/feedback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

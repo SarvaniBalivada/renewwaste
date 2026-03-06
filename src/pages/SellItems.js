@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
+import API_BASE_URL from '../config';
 
 function SellItems() {
   const fileInputRef = useRef(null);
@@ -75,7 +76,7 @@ function SellItems() {
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/items', {
+      const response = await fetch(`${API_BASE_URL}/api/items`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

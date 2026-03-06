@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button, Dialog, DialogContent, Typography } from '@mui/material';
 import './ItemCard.css';
+import API_BASE_URL from '../config';
 
 function ItemCard({ item }) {
   const [open, setOpen] = useState(false);
@@ -30,7 +31,7 @@ function ItemCard({ item }) {
         paymentMethod: 'COD'
       };
 
-      const response = await fetch('http://localhost:5000/api/orders', {
+      const response = await fetch(`${API_BASE_URL}/api/orders`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
