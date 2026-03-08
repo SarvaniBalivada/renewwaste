@@ -4,8 +4,8 @@ const app = express();
 const cors = require('cors');
 const path = require('path');
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');           // Add this
-const jwt = require('jsonwebtoken');        // Add this
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 // CORS configuration
 app.use(cors({
@@ -30,86 +30,99 @@ app.use(express.static(path.join(__dirname, '../public'), {
   dotfiles: 'ignore'
 }));
 
-// Handle manifest.json specifically - must come BEFORE the static middleware catches it
+// Handle manifest.json specifically
 app.get('/manifest.json', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/manifest.json'));
 });
 
-// Also handle the %PUBLIC_URL% prefix that React sometimes adds
 app.get('/%PUBLIC_URL%/manifest.json', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/manifest.json'));
 });
 
-// Handle favicon.ico
 app.get('/favicon.ico', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/favicon.ico'));
 });
 
 // Basic route for testing
 app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to WasteLoop API' });
+  res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// MongoDB connection - uses MONGODB_URI env var (for Vercel) or local MongoDB
-const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/wasteloop';
+// MongoDB Connection
+const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://saisairam075_db_user:sarvani9418@cluster0.m7i3acf.mongodb.net/';
+console.log('Connecting to MongoDB...');
 
-mongoose.connect(mongoUri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
+mongoose.connect(MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
 })
-  .then(() => console.log('Connected to MongoDB:', mongoUri.includes('localhost') ? 'Local' : 'Cloud'))
-  .catch(err => {
-    console.error('MongoDB connection error:', err.message);
-    console.log('Note: API will work but data won\'t persist without MongoDB');
-  });
+.then(() => console.log('✅ MongoDB Connected Successfully!'))
+.catch(err => {
+    console.error('❌ MongoDB Connection Error:', err.message);
+    process.exit(1);
+});
+
+// JWT Secret
+const JWT_SECRET = process.env.JWT_SECRET || 'wasteloop-secret-key-2024';
+
+// ==================== MONGOOSE MODELS ====================
 
 // User Schema
 const userSchema = new mongoose.Schema({
-  email: { type: String, unique: true, required: true },
-  password: { type: String, required: true }
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }
 });
-
 const User = mongoose.model('User', userSchema);
 
 // Item Schema
 const itemSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  description: String,
-  category: String,
-  price: Number,
-  imageUrl: { type: String, required: true },
-  listingType: String,
-  wasteCategory: { type: String, required: true },
-  quantity: { type: Number, required: true },
-  userId: String,
-  createdAt: { type: Date, default: Date.now }
+    title: { type: String, required: true },
+    description: { type: String },
+    category: { type: String },
+    price: { type: Number, default: 0 },
+    imageUrl: { type: String, required: true },
+    listingType: { type: String, default: 'sell' },
+    wasteCategory: { type: String, required: true },
+    quantity: { type: Number, required: true },
+    createdAt: { type: Date, default: Date.now }
 });
-
 const Item = mongoose.model('Item', itemSchema);
 
-// Item Routes
+// Order Schema
+const orderSchema = new mongoose.Schema({
+    userId: { type: String, required: true },
+    itemId: { type: String, required: true },
+    deliveryAddress: { type: String, required: true },
+    status: { type: String, default: 'placed' },
+    orderDate: { type: Date, default: Date.now }
+});
+const Order = mongoose.model('Order', orderSchema);
+
+// ==================== ITEMS API ====================
+
+// POST - Create new item
 app.post('/api/items', async (req, res) => {
   try {
     const { title, description, category, price, listingType, wasteCategory, quantity, imageUrl } = req.body;
     console.log('Received item data:', req.body);
 
-    // Validate required fields
     if (!title || !wasteCategory || !quantity || !imageUrl) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const item = new Item({
+    const newItem = new Item({
       title,
-      description,
-      category,
-      price: listingType === 'sell' ? Number(price) : 0, // Ensure price is a number
+      description: description || '',
+      category: category || '',
+      price: listingType === 'sell' ? Number(price) : 0,
       imageUrl,
-      listingType,
+      listingType: listingType || 'sell',
       wasteCategory,
-      quantity: Number(quantity) // Ensure quantity is a number
+      quantity: Number(quantity)
     });
 
-    const savedItem = await item.save();
+    const savedItem = await newItem.save();
     console.log('Item saved to database:', savedItem);
     res.status(201).json(savedItem);
   } catch (error) {
@@ -118,11 +131,11 @@ app.post('/api/items', async (req, res) => {
   }
 });
 
-// GET route to fetch all items
+// GET - Fetch all items
 app.get('/api/items', async (req, res) => {
   try {
     const items = await Item.find().sort({ createdAt: -1 });
-    console.log('Sending items to frontend:', items); // Debug log
+    console.log('Sending items to frontend:', items);
     res.setHeader('Content-Type', 'application/json');
     res.status(200).json(items);
   } catch (error) {
@@ -131,31 +144,41 @@ app.get('/api/items', async (req, res) => {
   }
 });
 
-// Authentication routes
+// ==================== AUTH API ====================
+
+// POST - Signup
 app.post('/api/auth/signup', async (req, res) => {
   try {
     const { email, password } = req.body;
+    
+    // Check if user exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+    
     const hashedPassword = await bcrypt.hash(password, 12);
     
-    const user = new User({
+    const newUser = new User({
       email,
       password: hashedPassword
     });
-
-    await user.save();
+    
+    await newUser.save();
     
     const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET,  // Updated this line
+      { userId: newUser._id },
+      JWT_SECRET,
       { expiresIn: '1h' }
     );
 
-    res.status(201).json({ token, userId: user._id });
+    res.status(201).json({ token, userId: newUser._id });
   } catch (error) {
     res.status(500).json({ message: 'Error creating user' });
   }
 });
 
+// POST - Login
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -173,7 +196,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     const token = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET,  // Updated this line
+      JWT_SECRET,
       { expiresIn: '1h' }
     );
 
@@ -183,52 +206,34 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// After Item Schema, add Order Schema
-// Order Schema
-const orderSchema = new mongoose.Schema({
-  userId: { type: String, required: true },
-  itemId: { type: String, required: true },
-  deliveryAddress: { type: String, required: true },  // Changed to simple string
-  status: { type: String, default: 'placed' },
-  orderDate: { type: Date, default: Date.now }
-});
+// ==================== ORDERS API ====================
 
-const Order = mongoose.model('Order', orderSchema);
-
-// Order Routes
+// POST - Create order
 app.post('/api/orders', async (req, res) => {
   try {
     console.log('Received order data:', req.body);
     
     const { deliveryAddress } = req.body;
     
-    // Simple validation with user-friendly message
     if (!deliveryAddress) {
       return res.status(400).json({ 
         success: false,
-        error: 'Please provide your complete delivery address including:\n' +
-              '- House/Flat No., Street Name\n' +
-              '- Area/Locality\n' +
-              '- City\n' +
-              '- State\n' +
-              '- PIN Code\n' +
-              '- Contact Number'
+        error: 'Please provide your complete delivery address'
       });
     }
 
-    const order = new Order({
+    const newOrder = new Order({
       userId: 'anonymous',
       itemId: req.body.itemId || 'temp-id',
       deliveryAddress,
       status: 'placed'
     });
 
-    const savedOrder = await order.save();
+    const savedOrder = await newOrder.save();
     
     res.status(201).json({ 
       success: true,
-      message: 'Thank you! Your order has been placed successfully.\n' +
-               'Delivery Address: ' + deliveryAddress,
+      message: 'Thank you! Your order has been placed successfully.',
       order: savedOrder 
     });
   } catch (error) {
@@ -240,18 +245,7 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
-// Add this at the end, before app.listen
-// Error handling middleware should be last
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.setHeader('Content-Type', 'application/json');
-  res.status(500).json({ 
-    success: false,
-    error: 'Something went wrong!'
-  });
-});
-
-// GET route to fetch all orders
+// GET - Fetch all orders
 app.get('/api/orders', async (req, res) => {
   try {
     const orders = await Order.find().sort({ orderDate: -1 });
@@ -260,6 +254,29 @@ app.get('/api/orders', async (req, res) => {
     console.error('Error fetching orders:', error);
     res.status(500).json({ error: 'Failed to fetch orders' });
   }
+});
+
+// ==================== FEEDBACK API ====================
+
+app.post('/api/feedback', (req, res) => {
+  const { name, email, message } = req.body;
+  console.log('Feedback received:', { name, email, message });
+  res.status(201).json({ message: 'Feedback submitted successfully' });
+});
+
+// Catch-all route for React (SPA) - must be last
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.setHeader('Content-Type', 'application/json');
+  res.status(500).json({ 
+    success: false,
+    error: 'Something went wrong!'
+  });
 });
 
 const PORT = process.env.PORT || 5000;

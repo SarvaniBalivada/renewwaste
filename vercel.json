@@ -2,6 +2,14 @@
   "version": 2,
   "builds": [
     {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "buildCommand": "npm run build",
+        "outputDirectory": "build"
+      }
+    },
+    {
       "src": "backend/server.js",
       "use": "@vercel/node"
     }
@@ -12,8 +20,20 @@
       "dest": "/backend/server.js"
     },
     {
+      "src": "/static/(.*)",
+      "dest": "/build/static/$1"
+    },
+    {
+      "src": "/manifest.json",
+      "dest": "/build/manifest.json"
+    },
+    {
+      "src": "/favicon.ico",
+      "dest": "/build/favicon.ico"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/backend/server.js"
+      "dest": "/build/index.html"
     }
   ]
 }
