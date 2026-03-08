@@ -8,16 +8,28 @@
         "buildCommand": "npm run build",
         "outputDirectory": "build"
       }
-    },
-    {
-      "src": "backend/server.js",
-      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/backend/server.js"
+      "src": "/api/items",
+      "dest": "/api/items.js"
+    },
+    {
+      "src": "/api/auth/signup",
+      "dest": "/api/auth.js"
+    },
+    {
+      "src": "/api/auth/login",
+      "dest": "/api/auth.js"
+    },
+    {
+      "src": "/api/orders",
+      "dest": "/api/orders.js"
+    },
+    {
+      "src": "/api/feedback",
+      "dest": "/api/feedback.js"
     },
     {
       "src": "/static/(.*)",
@@ -30,6 +42,10 @@
     {
       "src": "/favicon.ico",
       "dest": "/build/favicon.ico"
+    },
+    {
+      "src": "/service-worker.js",
+      "dest": "/build/service-worker.js"
     },
     {
       "src": "/(.*)",
